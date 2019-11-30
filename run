@@ -1,0 +1,23 @@
+#!/bin/sh
+
+if [ -z "$1" ]
+  then
+  echo "Usage:\n" \
+       "  $0 solve DAY\n" \
+       "  $0 test DAY\n" \
+       "  $0 bench DAY\n" >&2;
+  exit
+fi
+
+case "$1" in
+  "solve" )
+  stack exec AoC2019 -- "$2" 
+  ;;
+  "test" )
+  stack build --test --ta "-p $2" --fast --file-watch  
+  ;;
+  "bench" )
+  stack build --bench --ba "$2" --file-watch --ghc-options -O2
+  ;;
+esac
+
