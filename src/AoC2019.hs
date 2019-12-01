@@ -24,6 +24,7 @@ import           Day21
 import           Day22
 import           Day23
 import           Day24
+import           Day25
 
 inputFp :: String -> FilePath
 inputFp n = "input-data/" ++ n ++ ".txt"
@@ -78,4 +79,6 @@ argLookup =
     , ("23b", day23b)
     , ("24a", day24a)
     , ("24b", day24b)
+    , ("25a", day25a)
+    , ("25b", day25b)
     ]
