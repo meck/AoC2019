@@ -4,9 +4,7 @@ fuel :: Int -> Int
 fuel x = x `div` 3 - 2
 
 fuel' :: Int -> Int
-fuel' x | f <= 0    = 0
-        | otherwise = f + fuel' f
-    where f = fuel x
+fuel' = sum . takeWhile (> 0) . iterate fuel . fuel
 
 day01a :: String -> String
 day01a = show . sum . fmap (fuel . read) . lines
