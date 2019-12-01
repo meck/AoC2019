@@ -12,7 +12,11 @@ main = do
                           case lookup n argLookup of
                           Nothing -> die $ n ++ " is not a valid exercise"
                           Just p -> solvePart (n,p)
-                    
+
 
 solvePart :: (String, String -> String) -> IO ()
-solvePart (name, solu) = readFile (inputFp name) >>= putStrLn . (++) ("Solution to " ++ name ++ " is:\n") . solu
+solvePart (name, solu) = do
+    input <- readFile (inputFp name)
+    case input of
+        "" -> putStrLn $ "No input for puzzle " <> name
+        _  -> putStrLn $ (<>) ("Solution to " <> name <> " is:\n") $ solu input

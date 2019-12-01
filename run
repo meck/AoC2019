@@ -14,7 +14,7 @@ case "$1" in
   stack exec AoC2019 -- "$2" 
   ;;
   "test" )
-  stack build --test --ta "-p $2" --fast --file-watch  
+  stack build --test --ta "-p AoC2019.$2" --fast --file-watch  
   ;;
   "bench" )
   stack build --bench --ba "$2" --file-watch --ghc-options -O2
