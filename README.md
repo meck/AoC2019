@@ -2,8 +2,8 @@
 
 ### Solutions to advent of code 2019
 
-Exercises numbered `01a` - `24b`, to run `01a`
+Exercises numbered `1a` - `24b`, to run `1a`
 
-- solve `./run solve 01a`
-- test with file watch `./run test 01a`
-- benchmark with file watch `./run bench 01a`
+- solve `./run solve 1a`
+- test with file watch `./run test 1a`
+- benchmark with file watch `./run bench 1a`
