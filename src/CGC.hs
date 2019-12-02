@@ -1,6 +1,6 @@
 module CGC (runCGC, runCGCwithVandN) where
 
--- CHC: Christmas Guidence Computer!
+-- CGC: Christmas Guidance Computer!
 
 import           Control.Monad.State.Lazy
 import           Control.Applicative            ( liftA2 )
@@ -45,7 +45,7 @@ verbAndNoun v n = do
 
 getAddr :: Int -> CGCState Int
 getAddr addr =
-    fromMaybe (error "CGC Error: Memory out bounds") . (V.!? addr) . mem <$> get
+    fromMaybe (error "CGC Error: Memory access out of bounds") . (V.!? addr) . mem <$> get
 
 
 setAddr :: Int -> Int -> CGCState ()
@@ -62,7 +62,7 @@ step = do
         Just 2  -> mult >> step
         Just 99 -> exit
         Just _  -> error "CGC Error: Invalid Instruction"
-        Nothing -> error "CGC Error: Instruction Poiner out of bounds"
+        Nothing -> error "CGC Error: Instruction pointer out of bounds"
 
 runCGC :: [Int] -> Int
 runCGC m = evalState step $ CGC (V.fromList m) 0
