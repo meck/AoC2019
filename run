@@ -11,7 +11,7 @@ fi
 
 case "$1" in
   "solve" )
-  stack exec AoC2019 -- "$2" 
+  stack build && stack exec AoC2019 -- "$2" 
   ;;
   "test" )
   stack build --test --ta "-p AoC2019.$2" --fast --file-watch  
