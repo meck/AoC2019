@@ -2,6 +2,10 @@
 
 ### Solutions to advent of code 2019
 
+Add your session key to sessionKey.txt
+
+`echo -n "123456789abcdef..." > sessionKey.txt`
+
 Exercises numbered `1a` - `25b`, to run `1a`
 
 - solve `./run solve 1a`
