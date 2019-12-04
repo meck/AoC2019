@@ -1,18 +1,16 @@
 module Day4 (day04a, day04b) where
 
 import           Control.Applicative            ( liftA2 )
-import           Util                           ( digits
-                                                , group
-                                                )
+import           Util                           ( group )
 
-grpLenFilter :: (Int -> Bool) -> Int -> Bool
-grpLenFilter f = any (f . length) . group . digits
+grpLenFilter :: Eq a => (Int -> Bool) -> [a] -> Bool
+grpLenFilter f = any (f . length) . group
 
-isIncr :: Int -> Bool
-isIncr = and . mapAdj (<=) . digits where mapAdj f xs = zipWith f xs (tail xs)
+isIncr :: Ord a => [a] -> Bool
+isIncr = and . mapAdj (<=) where mapAdj f xs = zipWith f xs (tail xs)
 
-parse :: (Read a, Enum a) => String -> [a]
-parse s = [read x .. read $ tail x'] where (x, x') = break (== '-') s
+parse :: String -> [String]
+parse s = show <$> [read x ::Int .. read $ tail x'] where (x, x') = break (== '-') s
 
 day04a :: String -> String
 day04a =
