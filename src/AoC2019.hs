@@ -98,7 +98,7 @@ premDownload = "Please don't repeatedly request this endpoint before it unlocks!
 
 readInput :: String -> IO String
 readInput dayStr =
-    try cache >>= fmap checkValid <$> either (const download :: IOException -> IO String) return
+    try cache >>= either (const download :: IOException -> IO String) return
   where
     download = do
         sessionKey  <- fmap (head . lines) . readFile $ "sessionKey.txt"
@@ -114,10 +114,13 @@ readInput dayStr =
         manager <- newTlsManager
         s       <- withResponse req manager (brConsume . responseBody)
         let input = concatMap unpack s
-        writeFile (cacheName dayNumber) input
-        return input
+        if isValid input
+            then do
+                writeFile (cacheName dayNumber) input
+                return input
+            else return ""
     cache = do
         createCacheDir
         readFile $ cacheName dayNumber
-    checkValid s = if premDownload /= head (lines s) then s else ""
+    isValid s = premDownload /= head (lines s)
     dayNumber = read $ filter isDigit dayStr :: Int
