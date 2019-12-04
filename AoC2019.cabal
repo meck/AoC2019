@@ -57,7 +57,6 @@ library
         containers -any,
         split -any,
         mtl -any,
-        megaparsec -any,
         vector -any
 
 executable AoC2019

@@ -1,12 +1,21 @@
-module Util (strip, linesStrip, Data.List.Split.splitOn, mostFreq, manhaDist) where
+module Util
+    ( strip
+    , linesStrip
+    , Data.List.Split.splitOn
+    , Data.List.group
+    , mostFreq
+    , manhaDist
+    , digits
+    )
+where
 
-import           Data.List.Split                ( splitOn )
-import qualified Data.Text                     as T
-import           Data.List                      ( sort
-                                                , group
+import           Data.List                      ( group
                                                 , maximumBy
+                                                , sort
                                                 )
+import           Data.List.Split                ( splitOn )
 import           Data.Ord                       ( comparing )
+import qualified Data.Text                     as T
 
 strip :: String -> String
 strip = T.unpack . T.strip . T.pack
@@ -17,5 +26,12 @@ linesStrip = fmap (T.unpack . T.strip) . T.lines . T.strip . T.pack
 mostFreq :: Ord a => [a] -> [a]
 mostFreq = maximumBy (comparing length) . group . sort
 
-manhaDist :: (Int,Int) -> (Int,Int) -> Int
-manhaDist (x,y) (x',y') = abs (x - x') + abs (y - y')
+manhaDist :: Num a => (a, a) -> (a, a) -> a
+manhaDist (x, y) (x', y') = abs (x - x') + abs (y - y')
+
+digits :: Integral n => n -> [n]
+digits = reverse . digits'
+  where
+    digits' 0 = []
+    digits' x =
+        let (rest, lastDigit) = quotRem x 10 in lastDigit : digits' rest

@@ -17,7 +17,7 @@ case "$1" in
   stack build --test --ta "-p AoC2019.$2" --fast --file-watch  
   ;;
   "bench" )
-  stack build --bench --ba "$2" --file-watch --ghc-options -O2
+  stack build --force-dirty --bench --ba "$2" --file-watch --ghc-options -O2
   ;;
 esac
 
