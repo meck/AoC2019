@@ -53,11 +53,16 @@ library
                  -Wpartial-fields
     build-depends:
         base ^>=4.12.0.0,
-        text -any,
-        containers -any,
-        split -any,
-        mtl -any,
-        vector -any
+        text,
+        containers,
+        split,
+        mtl,
+        vector,
+        directory,
+        http-client,
+        http-client-tls,
+        bytestring,
+        case-insensitive
 
 executable AoC2019
     main-is: Main.hs
@@ -69,7 +74,7 @@ executable AoC2019
                  -Wmissing-export-lists -Wpartial-fields
     build-depends:
         base ^>=4.12.0.0,
-        AoC2019 -any
+        AoC2019 
 
 test-suite AoC2019-test
     type: exitcode-stdio-1.0
@@ -82,10 +87,10 @@ test-suite AoC2019-test
                  -Wmissing-export-lists -Wpartial-fields
     build-depends:
         base ^>=4.12.0.0,
-        tasty -any,
-        tasty-hunit -any,
-        text -any,
-        AoC2019 -any
+        tasty,
+        tasty-hunit,
+        text,
+        AoC2019 
 
 benchmark AoC2019-benchmark
     type: exitcode-stdio-1.0
@@ -98,5 +103,5 @@ benchmark AoC2019-benchmark
                  -Wmissing-export-lists -Wpartial-fields
     build-depends:
         base ^>=4.12.0.0,
-        gauge -any,
-        AoC2019 -any
+        gauge,
+        AoC2019 

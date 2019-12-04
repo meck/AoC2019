@@ -1,4 +1,4 @@
-module AoC2019 (inputFp, argLookup) where
+module AoC2019 (argLookup, readInput) where
 
 import           Day1
 import           Day2
@@ -25,9 +25,13 @@ import           Day22
 import           Day23
 import           Day24
 import           Day25
-
-inputFp :: String -> FilePath
-inputFp n = "input-data/" ++ n ++ ".txt"
+import           Control.Exception
+import           Data.ByteString.Char8   (pack, unpack)
+import           Data.CaseInsensitive    (mk)
+import           Data.Char               (isDigit)
+import           Network.HTTP.Client
+import           Network.HTTP.Client.TLS
+import           System.Directory        (createDirectoryIfMissing)
 
 argLookup :: [(String, String -> String)]
 argLookup =
@@ -82,3 +86,38 @@ argLookup =
     , ("25a", day25a)
     , ("25b", day25b)
     ]
+
+createCacheDir :: IO ()
+createCacheDir = createDirectoryIfMissing False ".cache"
+
+cacheName :: Show a => a -> String
+cacheName ms = ".cache/input-" <> show ms <> ".txt"
+
+premDownload :: String
+premDownload = "Please don't repeatedly request this endpoint before it unlocks! The calendar countdown is synchronized with the server time; the link will be enabled on the calendar the instant this puzzle becomes available."
+
+readInput :: String -> IO String
+readInput dayStr =
+    try cache >>= fmap checkValid <$> either (const download :: IOException -> IO String) return
+  where
+    download = do
+        sessionKey  <- fmap (head . lines) . readFile $ "sessionKey.txt"
+        initRequest <-
+            parseRequest
+            $  "http://adventofcode.com/2019/day/"
+            ++ show dayNumber
+            ++ "/input"
+        let session' = "session=" ++ sessionKey
+            req      = initRequest
+                { requestHeaders = [(mk $ pack "Cookie", pack session')]
+                }
+        manager <- newTlsManager
+        s       <- withResponse req manager (brConsume . responseBody)
+        let input = concatMap unpack s
+        writeFile (cacheName dayNumber) input
+        return input
+    cache = do
+        createCacheDir
+        readFile $ cacheName dayNumber
+    checkValid s = if premDownload /= head (lines s) then s else ""
+    dayNumber = read $ filter isDigit dayStr :: Int
