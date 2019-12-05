@@ -5,6 +5,7 @@ module Util
     , Data.List.group
     , mostFreq
     , manhaDist
+    , digitsR
     , digits
     )
 where
@@ -29,9 +30,10 @@ mostFreq = maximumBy (comparing length) . group . sort
 manhaDist :: Num a => (a, a) -> (a, a) -> a
 manhaDist (x, y) (x', y') = abs (x - x') + abs (y - y')
 
+digitsR :: Integral n => n -> [n]
+digitsR 0 = []
+digitsR x =
+    let (rest, lastDigit) = quotRem x 10 in lastDigit : digitsR rest
+
 digits :: Integral n => n -> [n]
-digits = reverse . digits'
-  where
-    digits' 0 = []
-    digits' x =
-        let (rest, lastDigit) = quotRem x 10 in lastDigit : digits' rest
+digits = reverse . digitsR
