@@ -1,4 +1,13 @@
-module CGC (CGC(..), runCGC, runCGC_, initCGC, setVerbAndNoun, readMem) where
+module CGC
+    ( CGCState(..)
+    , CGC
+    , runCGC
+    , runCGC_
+    , initCGC
+    , setVerbAndNoun
+    , readMem
+    )
+where
 
 -- CGC: Christmas Guidance Computer!
 
@@ -8,12 +17,52 @@ import           Data.Vector                    ( Vector )
 import qualified Data.Vector                   as V
 import           Util                           ( digitsR )
 
-type CGCState = State CGC
+-- | The 'Effect' type contains all the primitive effects that are
+-- observable on the virtual machine.
+data Effect a =
+    Done a
+  | ReadInt (Int -> Effect a)
+  | Print Int (Effect a)
+  | Fail String
 
-data CGC = CGC { mem      :: Vector Int,
-                 iP       :: Int,
-                inputBuf  :: [Int],
-                outputBuf :: [Int] } deriving (Eq, Show)
+instance Functor Effect where
+    fmap f (Done     x) = Done (f x)
+    fmap f (ReadInt t) = ReadInt (fmap f . t)
+    fmap f (Print c t ) = Print c (fmap f t)
+    fmap _ (Fail msg  ) = Fail msg
+
+instance Applicative Effect where
+    pure  = Done
+    (<*>) = ap
+
+instance Monad Effect where
+    return = Done
+    (Done     x) >>= f = f x
+    (ReadInt t) >>= f = ReadInt (t >=> f)
+    (Print c t ) >>= f = Print c (t >>= f)
+    (Fail msg  ) >>= _ = Fail msg
+
+instance Eq a => Eq (Effect a) where
+    (Done x) == (Done y) = x == y
+    (ReadInt f) == (ReadInt g) =
+        all (\x -> f x == g x) [minBound .. maxBound]
+    (Print c t) == (Print d u) = c == d && t == u
+    (Fail s   ) == (Fail t   ) = s == t
+    _           == _           = False
+
+type CGC a = StateT CGCState Effect a
+
+data CGCState = CGCState { mem      :: Vector Int,
+                           iP       :: Int } deriving (Eq, Show)
+
+readInt :: CGC Int
+readInt = StateT (\s -> ReadInt (\c -> Done (c, s)))
+
+printInt :: Int -> CGC ()
+printInt c = StateT (\s -> Print c (Done ((), s)))
+
+cgcFail :: String -> CGC a
+cgcFail str = StateT (\_ -> Fail str)
 
 newtype Pointer = Pointer { getPtr :: Int } deriving (Show, Eq)
 
@@ -30,77 +79,59 @@ data Op = ADD Param Param Pointer
         | HALT
             deriving (Eq, Show)
 
-doOp :: Op -> CGCState ()
-
-doOp (ADD x y r) = mathOp (+) x y r
-
-doOp (MUL x y r) = mathOp (*) x y r
-
-doOp (READ d   ) = do
-    s <- get
-    case inputBuf s of
-        []       -> error "CGC Error: Missing Input"
-        (i : is) -> setInpBuf is >> setAdr d i >> moveIP 2
-
-doOp (WRITE m) = do
-    m' <- derefPar m
-    s  <- get
-    put $ s { outputBuf = m' : outputBuf s }
-    moveIP 2
-
+doOp :: Op -> CGC ()
+doOp (ADD x y r ) = mathOp (+) x y r
+doOp (MUL x y r ) = mathOp (*) x y r
+doOp (READ  d   ) = (readInt >>= setAdr d) >> moveIP 2
+doOp (WRITE m   ) = (derefPar m >>= printInt) >> moveIP 2
 doOp (JZ x d) = derefPar x >>= (\x' -> if x' == 0 then setIP d else moveIP 3)
-
 doOp (JNZ x d) = derefPar x >>= (\x' -> if x' /= 0 then setIP d else moveIP 3)
-
 doOp (LESS x y d) = do
     x' <- derefPar x
     y' <- derefPar y
-    (if x' < y' then setAdr d 1 else setAdr d 0) >> moveIP 4
-
+    if x' < y' then setAdr d 1 else setAdr d 0
+    moveIP 4
 doOp (CMP x y d) = do
     x' <- derefPar x
     y' <- derefPar y
-    (if x' == y' then setAdr d 1 else setAdr d 0) >> moveIP 4
-
+    if x' == y' then setAdr d 1 else setAdr d 0
+    moveIP 4
 doOp HALT = pure ()
 
 -- Helpers
-mathOp :: (Int -> Int -> Int) -> Param -> Param -> Pointer -> CGCState ()
+mathOp :: (Int -> Int -> Int) -> Param -> Param -> Pointer -> CGC ()
 mathOp f x y d = do
     x' <- derefPar x
     y' <- derefPar y
     setAdr d (x' `f` y')
     moveIP 4
 
-derefPar :: Param -> CGCState Int
+derefPar :: Param -> CGC Int
 derefPar (Val i) = pure i
 derefPar (Ptr p) = derefPtr (Pointer p)
 
-derefPtr :: Pointer -> CGCState Int
-derefPtr (Pointer addr) =
-    fromMaybe (error "CGC Error: Memory access out of bounds")
-        .   (V.!? addr)
-        .   mem
-        <$> get
+derefPtr :: Pointer -> CGC Int
+derefPtr (Pointer addr) = do
+    st <- get
+    let mi = mem st V.!? addr
+    case mi of
+        Just i  -> pure i
+        Nothing -> cgcFail "Memory access out of bounds"
 
-setAdr :: Pointer -> Int -> CGCState ()
+setAdr :: Pointer -> Int -> CGC ()
 setAdr (Pointer addr) val = modify $ \s -> s { mem = mem s V.// [(addr, val)] }
 
-setIP :: Param -> CGCState ()
+setIP :: Param -> CGC ()
 setIP i = do
     i' <- derefPar i
     s  <- get
     put $ s { iP = i' }
 
-moveIP :: Int -> CGCState ()
+moveIP :: Int -> CGC ()
 moveIP i = modify $ \s -> s { iP = iP s + i }
 
-setInpBuf :: [Int] -> CGCState ()
-setInpBuf i = modify $ \s -> s { inputBuf = i }
 
-
--- Tick Tock
-nextInst :: CGC -> Op
+nextInst :: CGCState -> Op
 nextInst cgc =
     let op  = fromMaybe (error "CGC Error: IP out of bounds") $ m V.!? i
         pa0 = par 0
@@ -128,33 +159,45 @@ nextInst cgc =
     ptr n = maybe (error "Parameter error") Pointer (m V.!? (succ i + n))
     i = iP cgc
     m = mem cgc
+    digPad n int = take n $ digitsR int <> repeat 0
 
 -- API
 
--- Run and return the final state
-runCGC_ :: CGC -> ((), CGC)
-runCGC_ = runState step
+-- Run withour input and ignore output
+-- untill halt and return the final state
+runCGC_ :: CGCState -> CGCState
+runCGC_ st = handleEff $ runStateT (get >>= doOp . nextInst) st
   where
-    step = do
-        s <- get
-        case nextInst s of
-            HALT -> doOp HALT
-            i    -> doOp i >> step
+    handleEff (ReadInt _  ) = error "CGC Error: No input"
+    handleEff (Print _ eff ) = handleEff eff
+    handleEff (Fail str    ) = error $ "CGC Error: " <> str
+    handleEff (Done (_, c')) = case nextInst c' of
+        HALT -> c'
+        _    -> runCGC_ c'
 
--- Run and return the output
-runCGC :: CGC -> [Int]
-runCGC = outputBuf . snd . runCGC_
 
--- Setup with memory and Inputbuffer
-initCGC :: [Int] -> [Int] -> CGC
-initCGC m inp = CGC (V.fromList m) 0 inp []
+-- Run till halt and return all the output
+-- in order of they were produced
+runCGC :: CGCState -> [Int] -> [Int]
+runCGC st inp = runCGC' st inp []
+  where
+    runCGC' st' inp' outp =
+        handleEff inp' outp $ runStateT (get >>= doOp . nextInst) st'
+    handleEff i o (ReadInt f  ) = handleEff (tail i) o (f $ head i)
+    handleEff i o (Print p eff ) = handleEff i (p : o) eff
+    handleEff _ _ (Fail str    ) = error $ "CGC Error: " <> str
+    handleEff i o (Done (_, c')) = case nextInst c' of
+        HALT -> o
+        _    -> runCGC' c' i o
 
--- Set the Verb and Noun before running
-setVerbAndNoun :: (Int, Int) -> (CGC -> CGC)
+-- Setup with memory
+initCGC :: [Int] -> CGCState
+initCGC m = CGCState (V.fromList m) 0
+
+-- Set the Verb and Noun
+setVerbAndNoun :: (Int, Int) -> (CGCState -> CGCState)
 setVerbAndNoun (v, n) cgc = cgc { mem = mem cgc V.// [(1, v), (2, n)] }
 
-readMem :: CGC -> [Int]
+-- Get the memory
+readMem :: CGCState -> [Int]
 readMem cgc = V.toList $ mem cgc
-
-digPad :: Integral a => Int -> a -> [a]
-digPad n i = take n $ digitsR i <> repeat 0

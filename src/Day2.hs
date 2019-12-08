@@ -16,7 +16,7 @@ solveB out m =
 
 runCGCwithVN :: [Int] -> (Int, Int) -> Int
 runCGCwithVN m vn =
-    head $ readMem $ snd $ runCGC_ $ setVerbAndNoun vn $ initCGC m []
+    head $ readMem $ runCGC_ $ setVerbAndNoun vn $ initCGC m
 
 day02a :: String -> String
 day02a = show . flip runCGCwithVN (12, 2) . fmap read . splitOn ","
