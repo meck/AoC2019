@@ -1,8 +1,11 @@
 module CGC
     ( CGCState(..)
     , CGC
+    , Buffers
+    , Result
+    , evalCGC
+    , execCGC
     , runCGC
-    , runCGC_
     , initCGC
     , setVerbAndNoun
     , readMem
@@ -165,30 +168,33 @@ nextInst cgc =
 
 -- Run withour input and ignore output
 -- untill halt and return the final state
-runCGC_ :: CGCState -> CGCState
-runCGC_ st = handleEff $ runStateT (get >>= doOp . nextInst) st
-  where
-    handleEff (ReadInt _  ) = error "CGC Error: No input"
-    handleEff (Print _ eff ) = handleEff eff
-    handleEff (Fail str    ) = error $ "CGC Error: " <> str
-    handleEff (Done (_, c')) = case nextInst c' of
-        HALT -> c'
-        _    -> runCGC_ c'
+execCGC :: CGCState -> CGCState
+execCGC s = case runCGC s ([], []) of
+    Halted  (_, s') -> s'
+    Waiting _       -> error "CGC Error: No input"
 
 
 -- Run till halt and return all the output
 -- in order of they were produced
-runCGC :: CGCState -> [Int] -> [Int]
-runCGC st inp = runCGC' st inp []
+evalCGC :: CGCState -> [Int] -> [Int]
+evalCGC s inp = case runCGC s (inp, []) of
+    Halted  ((_, o), _) -> o
+    Waiting _           -> error "CGC Error: No input"
+
+type Buffers = ([Int],[Int])
+
+data Result = Halted (Buffers,CGCState) | Waiting (Buffers, CGCState)
+
+runCGC :: CGCState -> Buffers -> Result
+runCGC s buf = handleEff buf $ runStateT (get >>= doOp . nextInst) s
   where
-    runCGC' st' inp' outp =
-        handleEff inp' outp $ runStateT (get >>= doOp . nextInst) st'
-    handleEff i o (ReadInt f  ) = handleEff (tail i) o (f $ head i)
-    handleEff i o (Print p eff ) = handleEff i (p : o) eff
-    handleEff _ _ (Fail str    ) = error $ "CGC Error: " <> str
-    handleEff i o (Done (_, c')) = case nextInst c' of
-        HALT -> o
-        _    -> runCGC' c' i o
+    handleEff (i, o) (ReadInt f) =
+        if null i then Waiting (buf, s) else handleEff (tail i, o) (f $ head i)
+    handleEff (i, o) (Print p eff ) = handleEff (i, p : o) eff
+    handleEff _      (Fail str    ) = error $ "CGC Error: " <> str
+    handleEff (i, o) (Done (_, c')) = case nextInst c' of
+        HALT -> Halted ((i, o), c')
+        _    -> runCGC c' (i, o)
 
 -- Setup with memory
 initCGC :: [Int] -> CGCState
