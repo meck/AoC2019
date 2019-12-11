@@ -4,7 +4,7 @@ import           Data.List.Split                ( splitOn )
 import           CGC
 
 day05a :: String -> String
-day05a = show . head . flip evalCGC [1] . initCGC . fmap read . splitOn ","
+day05a = show . last . flip evalCGCprg [1] . fmap read . splitOn ","
 
 day05b :: String -> String
-day05b = show . head . flip evalCGC [5] . initCGC . fmap read . splitOn ","
+day05b = show . last . flip evalCGCprg [5] . fmap read . splitOn ","

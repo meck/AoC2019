@@ -1,25 +1,22 @@
 module Day7 (day07a, day07b) where
 
 import           CGC
-import Util (splitOn)
-import Data.List (permutations)
+import           Data.List                      ( permutations )
+import           Util                           ( splitOn )
 
--- solveA ip = maximum $ testPha ip <$> phaSet
+-- Runs the VMs with diffrent phase setings recursivly unil they all halted and
+-- returns the last output of the last one
+foldCGCs :: Foldable t => [Int] -> t Int -> Int
+foldCGCs prog phas = last out
+  where
+    out = foldr (\p inp -> evalCGCprg prog (p : inp)) (0 : out) phas
 
-
--- testPha prg pha = compE
---   where compA = runCGC $ initCGC prg $ (pha !! 0) : [0]
---         compB = runCGC $ initCGC prg $ (pha !! 1) : compA
---         compC = runCGC $ initCGC prg $ (pha !! 2) : compB
---         compD = runCGC $ initCGC prg $ (pha !! 3) : compC
---         compE = runCGC $ initCGC prg $ (pha !! 4) : compD
-
--- phaSet = permutations [5..9]
+-- Get the thrust for every phase setting
+maxThrust :: [Int] -> [Int] -> Int
+maxThrust p prg = maximum $ foldCGCs prg <$> permutations p
 
 day07a :: String -> String
-day07a = id -- show . solveA . fmap read . splitOn ","
--- day07a = id
+day07a = show . maxThrust [0 .. 4] . fmap read . splitOn ","
 
 day07b :: String -> String
-day07b = id
-
+day07b = show . maxThrust [5 .. 9] . fmap read . splitOn ","

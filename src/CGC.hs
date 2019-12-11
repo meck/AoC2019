@@ -1,11 +1,8 @@
 module CGC
     ( CGCState(..)
-    , CGC
-    , Buffers
-    , Result
     , evalCGC
     , execCGC
-    , runCGC
+    , evalCGCprg
     , initCGC
     , setVerbAndNoun
     , readMem
@@ -15,8 +12,8 @@ where
 -- CGC: Christmas Guidance Computer!
 
 import           Control.Monad.State.Lazy
-import           Data.IntMap                    ( IntMap )
-import qualified Data.IntMap                   as IM
+import           Data.IntMap.Lazy               ( IntMap )
+import qualified Data.IntMap.Lazy              as IM
 import           Data.Maybe                     ( fromMaybe )
 import           Util                           ( digitsR )
 
@@ -166,37 +163,34 @@ nextInst cgc =
     m  = mem cgc
     digPad n int = take n $ digitsR int <> repeat 0
 
+type Buffers = ([Int], [Int])
+
+runCGC :: CGCState -> Buffers -> (Buffers, CGCState)
+runCGC s buf = handleEff buf $ runStateT (get >>= doOp . nextInst) s
+  where
+    -- TODO handle empty inbuf lazily
+    handleEff (i, o) (ReadInt f   ) = handleEff (tail i, o) (f $ head i)
+    handleEff (i, o) (Print p eff ) = handleEff (i, p : o) eff
+    handleEff _      (Fail str    ) = error $ "CGC Error: " <> str
+    handleEff (i, o) (Done (_, c')) = case nextInst c' of
+        HALT -> ((i, reverse o), c')
+        _    -> runCGC c' (i, o)
+
 -- API
 
 -- Run withour input and ignore output
 -- untill halt and return the final state
 execCGC :: CGCState -> CGCState
-execCGC s = case runCGC s ([], []) of
-    Halted  (_, s') -> s'
-    Waiting _       -> error "CGC Error: No input"
-
+execCGC s = snd $ runCGC s ([], [])
 
 -- Run till halt and return all the output
 -- in order of they were produced
 evalCGC :: CGCState -> [Int] -> [Int]
-evalCGC s inp = case runCGC s (inp, []) of
-    Halted  ((_, o), _) -> o
-    Waiting _           -> error "CGC Error: No input"
+evalCGC s inp = snd $ fst $ runCGC s (inp, [])
 
-type Buffers = ([Int], [Int])
-
-data Result = Halted (Buffers,CGCState) | Waiting (Buffers, CGCState)
-
-runCGC :: CGCState -> Buffers -> Result
-runCGC s buf = handleEff buf $ runStateT (get >>= doOp . nextInst) s
-  where
-    handleEff (i, o) (ReadInt f) =
-        if null i then Waiting (buf, s) else handleEff (tail i, o) (f $ head i)
-    handleEff (i, o) (Print p eff ) = handleEff (i, p : o) eff
-    handleEff _      (Fail str    ) = error $ "CGC Error: " <> str
-    handleEff (i, o) (Done (_, c')) = case nextInst c' of
-        HALT -> Halted ((i, o), c')
-        _    -> runCGC c' (i, o)
+-- Run a Program
+evalCGCprg :: [Int] -> [Int] -> [Int]
+evalCGCprg prg inp = snd $ fst $ runCGC (initCGC prg) (inp, [])
 
 -- Setup with memory
 initCGC :: [Int] -> CGCState
