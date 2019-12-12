@@ -20,12 +20,12 @@ angle (xA, yA) (xB, yB) = (\a -> if a < 0 then a + 2 * pi else a) $ atan2 dx dy
     dx = fromInteger $ xB - xA
     dy = fromInteger $ yA - yB
 
--- Num of seen astoroids from a point
+-- Number of seen asteroids from a point
 -- using fusion of the set
 noOfseen :: AstMap -> Cord -> Int
 noOfseen am c = S.size $ S.map (angle c) am
 
--- Cord with most visible astoroids
+-- Cord with most visible asteroids
 findBest :: AstMap -> (Int, Cord)
 findBest m = S.findMax $ S.map ((,) =<< noOfseen m) m
 
