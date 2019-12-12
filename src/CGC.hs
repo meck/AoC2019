@@ -2,6 +2,7 @@ module CGC
     ( CGCState(..)
     , evalCGC
     , execCGC
+    , runCGCuntilOut
     , evalCGCprg
     , initCGC
     , setVerbAndNoun
@@ -165,32 +166,49 @@ nextInst cgc =
 
 type Buffers = ([Int], [Int])
 
-runCGC :: CGCState -> Buffers -> (Buffers, CGCState)
-runCGC s buf = handleEff buf $ runStateT (get >>= doOp . nextInst) s
-  where
-    -- TODO handle empty inbuf lazily
-    handleEff (i, o) (ReadInt f   ) = handleEff (tail i, o) (f $ head i)
-    handleEff (i, o) (Print p eff ) = handleEff (i, p : o) eff
-    handleEff _      (Fail str    ) = error $ "CGC Error: " <> str
-    handleEff (i, o) (Done (_, c')) = case nextInst c' of
-        HALT -> ((i, reverse o), c')
-        _    -> runCGC c' (i, o)
+
+handlEff
+    :: Buffers
+    -> Effect (a, CGCState)
+    -> Either (CGCState, Buffers) (CGCState, Buffers)
+-- TODO handle empty inbuf lazily
+handlEff (i, o) (ReadInt f  ) = handlEff (tail i, o) (f $ head i)
+handlEff (i, o) (Print p eff) = handlEff (i, p : o) eff
+handlEff _      (Fail str   ) = error $ "CGC Error: " <> str
+handlEff (i, o) (Done (_, s)) = case nextInst s of
+    HALT -> Left (s, (i, o))
+    _    -> Right (s, (i, o))
 
 -- API
+
+-- Run untill halt
+runCGC :: CGCState -> Buffers -> (CGCState, Buffers)
+runCGC s buf = case handlEff buf $ runStateT (get >>= doOp . nextInst) s of
+    Left  (s', (i, o)) -> (s', (i, reverse o))
+    Right (s', b     ) -> runCGC s' b
+
+-- Run untill output buffer of a specific size or halt
+runCGCuntilOut :: Int -> CGCState -> Buffers -> Maybe (CGCState, Buffers)
+runCGCuntilOut outlen s buf =
+    case handlEff buf $ runStateT (get >>= doOp . nextInst) s of
+        Left  _  -> Nothing
+        Right bs -> if outlen > length (snd $ snd bs)
+            then uncurry (runCGCuntilOut outlen) bs
+            else Just bs
 
 -- Run withour input and ignore output
 -- untill halt and return the final state
 execCGC :: CGCState -> CGCState
-execCGC s = snd $ runCGC s ([], [])
+execCGC s = fst $ runCGC s ([], [])
 
 -- Run till halt and return all the output
 -- in order of they were produced
 evalCGC :: CGCState -> [Int] -> [Int]
-evalCGC s inp = snd $ fst $ runCGC s (inp, [])
+evalCGC s inp = snd $ snd $ runCGC s (inp, [])
 
 -- Run a Program
 evalCGCprg :: [Int] -> [Int] -> [Int]
-evalCGCprg prg inp = snd $ fst $ runCGC (initCGC prg) (inp, [])
+evalCGCprg prg inp = snd $ snd $ runCGC (initCGC prg) (inp, [])
 
 -- Setup with memory
 initCGC :: [Int] -> CGCState
