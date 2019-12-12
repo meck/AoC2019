@@ -1,9 +1,7 @@
 module Day12 (day12a, day12b) where
 
 import           Data.Char                      ( isDigit )
-import           Data.List                      ( findIndex )
-import           Data.Maybe                     ( fromJust )
-import Util (splitOn)
+import           Util                           ( splitOn )
 newtype Pos = Pos { pos :: (Int,Int,Int)} deriving (Eq, Show)
 newtype Vel = Vel { vel :: (Int,Int,Int)} deriving (Eq, Show)
 newtype Acc = Acc { acc :: (Int,Int,Int)} deriving (Eq, Show)
@@ -52,10 +50,12 @@ step = fmap applyVel . applyGrav
 
 parse :: String -> [Moon]
 parse inp = step2
-    where step1 = lines inp
-          step2 = parse' . splitOn "," . filter (\c -> isDigit c || elem c "-,") <$> step1
-          parse' (a:b:c:_) = initMoon (read a)  (read b)  (read c)
-          parse' _ = error "Bad input"
+  where
+    step1 = lines inp
+    step2 =
+        parse' . splitOn "," . filter (\c -> isDigit c || elem c "-,") <$> step1
+    parse' (a : b : c : _) = initMoon (read a) (read b) (read c)
+    parse' _               = error "Bad input"
 
 day12a :: String -> String
 day12a = show . sum . fmap totEnergy . (!! 1000) . iterate step . parse
@@ -63,8 +63,9 @@ day12a = show . sum . fmap totEnergy . (!! 1000) . iterate step . parse
 -- Get the periodicity of each dimension and get the `lcm` of all of them
 day12b :: String -> String
 day12b inp = show $ lcm (period xDimen) $ lcm (period yDimen) (period zDimen)
-  where period d = succ $ length $ takeWhile (/= head xs) $ tail xs
-            where xs = fmap d <$> iterate step (parse inp)
-        xDimen (Moon (Pos (px, _, _)) (Vel (vx, _, _))) = (px, vx)
-        yDimen (Moon (Pos (_, py, _)) (Vel (_, vy, _))) = (py, vy)
-        zDimen (Moon (Pos (_, _, pz)) (Vel (_, _, vz))) = (pz, vz)
+  where
+    period d = succ $ length $ takeWhile (/= head xs) $ tail xs
+        where xs = fmap d <$> iterate step (parse inp)
+    xDimen (Moon (Pos (px, _, _)) (Vel (vx, _, _))) = (px, vx)
+    yDimen (Moon (Pos (_, py, _)) (Vel (_, vy, _))) = (py, vy)
+    zDimen (Moon (Pos (_, _, pz)) (Vel (_, _, vz))) = (pz, vz)
