@@ -62,7 +62,7 @@ trlAndSca x y = translate
 
 data TileID = Empty | Wall | Block deriving (Enum, Show, Eq)
 type Tiles = Map Cord TileID
-data Joystick = TiltLeft | TiltRight | Straight deriving (Show)
+data Joystick = TiltLeft | TiltRight | Straight deriving (Show, Eq)
 
 getJoy :: Joystick -> Int
 getJoy TiltLeft  = -1
@@ -74,7 +74,7 @@ data Sim = Sim { tiles      :: Tiles
                  , paddle   :: Maybe Cord
                  , score    :: Int
                  , joystick :: Joystick
-                 , cpu      :: CGCState }
+                 , cpu      :: CGCState } deriving Eq
 
 drawTileID :: TileID -> Picture
 drawTileID Empty = Blank
@@ -103,10 +103,10 @@ drawScore s = pictures [bkg, sp]
             $  "Score: "
             <> show s
     bkg =
-        translate 0 (fromIntegral $ (snd winSize `div` 2 - scoreHeight `div` 2))
+        translate 0 (fromIntegral $ snd winSize `div` 2 - scoreHeight `div` 2)
             $ color textBgColor
             $ rectangleSolid (fromIntegral $ fst winSize)
-                             (fromIntegral $ scoreHeight)
+                             (fromIntegral scoreHeight)
 
 drawSim :: Sim -> Picture
 drawSim w = pictures $ catMaybes
@@ -182,6 +182,17 @@ day13a =
         . fmap read
         . splitOn ","
 
--- Run unsafe
+-- For running without the visualization
+-- runSimWithoutDisplay :: [Char] -> Int
+-- runSimWithoutDisplay prg = score $ fromJust $ firstEqual $ iterate
+--     (stepSim undefined 0)
+--     iSim
+--     where iSim = initalSim $ initCGC $ (:) 2 $ tail $ read <$> splitOn "," prg
+
+-- firstEqual :: Eq p => [p] -> Maybe p
+-- firstEqual (x : y : _) | x == y = Just x
+-- firstEqual (_ : xs)             = firstEqual xs
+-- firstEqual _                    = Nothing
+
 day13b :: String -> String
 day13b = deepseq =<< unsafePerformIO . runSim
