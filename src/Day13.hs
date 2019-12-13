@@ -152,14 +152,12 @@ moveJoy :: Sim -> Sim
 moveJoy w = w { joystick = nextJoy }
   where
     nextJoy = fromMaybe Straight $ do
-        (px, py) <- paddle w
-        (bx, by) <- ball w
-        pure $ if by <= py
-            then case px `compare` bx of
-                GT -> TiltLeft
-                LT -> TiltRight
-                EQ -> Straight
-            else Straight
+        (px, _) <- paddle w
+        (bx, _) <- ball w
+        pure $ case px `compare` bx of
+            GT -> TiltLeft
+            LT -> TiltRight
+            EQ -> Straight
 
 runSim :: String -> IO ()
 runSim inp = simulate (InWindow "Christmas Arcade" winSize winPos)
