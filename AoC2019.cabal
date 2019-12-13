@@ -62,7 +62,9 @@ library
         http-client,
         http-client-tls,
         bytestring,
-        case-insensitive
+        case-insensitive,
+        gloss,
+        deepseq
 
 executable AoC2019
     main-is: Main.hs
@@ -71,7 +73,7 @@ executable AoC2019
     ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
                  -Wincomplete-uni-patterns -Wincomplete-record-updates -Wcompat
                  -Widentities -Wredundant-constraints -fhide-source-paths
-                 -Wmissing-export-lists -Wpartial-fields
+                 -Wmissing-export-lists -Wpartial-fields -threaded
     build-depends:
         base ^>=4.12.0.0,
         AoC2019 
