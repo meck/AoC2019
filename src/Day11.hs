@@ -7,6 +7,7 @@ import           Data.Map.Lazy                  ( Map )
 import qualified Data.Map.Lazy                 as M
 import           Util                           ( splitOn
                                                 , (+^)
+                                                , drawCords
                                                 )
 
 type Cord = (Integer, Integer)
@@ -75,7 +76,7 @@ nextInst = do
     st <- robSta <$> get
     let a = runCGCuntilOut 2 st ([fromEnum cc], [])
     case a of
-        Just (st', (_, (d : c : []))) -> do
+        Just (st', (_, [d, c])) -> do
             updateRob st'
             pure $ Just (toEnum c, toInteger d)
         _ -> pure Nothing
@@ -87,23 +88,12 @@ runRobot = do
         Just (c, d) -> paintPanel c *> turnRobot d *> stepRobot *> runRobot
         Nothing     -> panels <$> get
 
-dispPaint :: Map Cord Color -> [String]
-dispPaint pm = fmap (dispColor . flip findColor pm) <$> cords
-  where
-    xMin  = M.foldrWithKey' (\(x, _) _ x' -> min x x') 0 pm
-    xMax  = M.foldrWithKey' (\(x, _) _ x' -> max x x') 0 pm
-    yMin  = M.foldrWithKey' (\(_, y) _ y' -> min y y') 0 pm
-    yMax  = M.foldrWithKey' (\(_, y) _ y' -> max y y') 0 pm
-    cords = [ [ (x, y) | x <- [xMin .. xMax] ] | y <- [yMin .. yMax] ]
-
 day11a :: String -> String
 day11a =
     show . M.size . evalState runRobot . initState . fmap read . splitOn ","
 
 day11b :: String -> String
-day11b =
-    unlines
-        . dispPaint
+day11b =  drawCords Black dispColor
         . evalState (paintPanel White *> runRobot)
         . initState
         . fmap read

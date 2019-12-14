@@ -12,6 +12,8 @@ module Util
     , (-^)
     , (+^)
     , groupSortOn
+    , drawCords
+    , genGrid
     )
 where
 
@@ -25,9 +27,9 @@ import           Data.List                      ( group
                                                 , sortBy
                                                 )
 import           Data.List.Split                ( splitOn )
+import qualified Data.Map.Lazy                 as M
 import           Data.Ord                       ( comparing )
 import qualified Data.Text                     as T
-
 
 bimap' :: Bifunctor p => (a -> d) -> p a a -> p d d
 bimap' f = bimap f f
@@ -61,3 +63,24 @@ groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f =
     map (map snd) . groupBy ((==) `on` fst) . sortBy (compare `on` fst) . map
         (f &&& id)
+
+-- [[(0,0),(0,1)],[(1,0),(1,1)]]
+genGrid :: (Enum b1, Enum a) => ((a, b1) -> b2) -> a -> a -> b1 -> b1 -> [[b2]]
+genGrid f xMin xMax yMin yMax =
+    fmap f <$> [ [ (x, y) | x <- [xMin .. xMax] ] | y <- [yMin .. yMax] ]
+
+
+-- Draw a grid with a supplied (a -> Char) and a defualt `a`
+drawCords
+    :: (Ord b, Num b, Ord a1, Num a1, Enum b, Enum a1)
+    => a2
+    -> (a2 -> Char)
+    -> M.Map (a1, b) a2
+    -> String
+drawCords def f m = unlines $ fmap (f . flip (M.findWithDefault def) m) <$> cs
+  where
+    xMin = M.foldrWithKey (\(x, _) _ x' -> min x x') 0 m
+    xMax = M.foldrWithKey (\(x, _) _ x' -> max x x') 0 m
+    yMin = M.foldrWithKey (\(_, y) _ y' -> min y y') 0 m
+    yMax = M.foldrWithKey (\(_, y) _ y' -> max y y') 0 m
+    cs   = [ [ (x, y) | x <- [xMin .. xMax] ] | y <- [yMin .. yMax] ]
