@@ -14,10 +14,13 @@ module Util
     , groupSortOn
     , drawCords
     , genGrid
+    , firstEq
     )
 where
 
+import           Control.Applicative            ( liftA2 )
 import           Control.Arrow                  ( (&&&) )
+import           Control.Monad                  ( ap )
 import           Data.Bifunctor
 import           Data.Function                  ( on )
 import           Data.List                      ( group
@@ -63,6 +66,10 @@ groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f =
     map (map snd) . groupBy ((==) `on` fst) . sortBy (compare `on` fst) . map
         (f &&& id)
+
+-- The first in a list where the next one is equal
+firstEq :: Eq a => [a] -> a
+firstEq = fst . head . dropWhile (liftA2 (/=) snd fst) . ap zip tail
 
 -- [[(0,0),(0,1)],[(1,0),(1,1)]]
 genGrid :: (Enum b1, Enum a) => ((a, b1) -> b2) -> a -> a -> b1 -> b1 -> [[b2]]
