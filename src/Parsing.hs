@@ -24,4 +24,4 @@ run :: ReadP a -> String -> a
 run parser s
     | null rest = a
     | otherwise = error $ "AOC Incomplete parse, remaining: \"" <> rest <> "\""
-    where (a, rest) = minimumBy (comparing snd) $ readP_to_S parser s
+    where (a, rest) = minimumBy (comparing snd) $ readP_to_S (parser <* skipSpaces) s

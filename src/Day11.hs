@@ -76,7 +76,7 @@ nextInst = do
     st <- robSta <$> get
     let a = runCGCuntilOut 2 st ([fromEnum cc], [])
     case a of
-        Just (st', (_, [d, c])) -> do
+        Right (st', (_, [d, c])) -> do
             updateRob st'
             pure $ Just (toEnum c, toInteger d)
         _ -> pure Nothing

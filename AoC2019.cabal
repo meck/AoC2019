@@ -65,7 +65,8 @@ library
         bytestring,
         case-insensitive,
         gloss,
-        deepseq
+        deepseq,
+        astar-monad
 
 executable AoC2019
     main-is: Main.hs

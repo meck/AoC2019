@@ -188,13 +188,13 @@ runCGC s buf = case handlEff buf $ runStateT (get >>= doOp . nextInst) s of
     Right (s', b     ) -> runCGC s' b
 
 -- Run untill output buffer of a specific size or halt
-runCGCuntilOut :: Int -> CGCState -> Buffers -> Maybe (CGCState, Buffers)
+runCGCuntilOut :: Int -> CGCState -> Buffers -> Either (CGCState, Buffers) (CGCState, Buffers)
 runCGCuntilOut outlen s buf =
     case handlEff buf $ runStateT (get >>= doOp . nextInst) s of
-        Left  _  -> Nothing
+        Left  bs  -> Left bs 
         Right bs -> if outlen > length (snd $ snd bs)
             then uncurry (runCGCuntilOut outlen) bs
-            else Just bs
+            else Right bs
 
 -- Run withour input and ignore output
 -- untill halt and return the final state

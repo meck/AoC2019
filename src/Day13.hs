@@ -140,8 +140,8 @@ readInst is = case is of
 
 stepSim :: ViewPort -> Float -> Sim -> Sim
 stepSim vp t w = case runCGCuntilOut 3 (cpu w) ([getJoy (joystick w)], []) of
-    Nothing             -> w
-    Just (cpu', (_, o)) -> case readInst o of
+    Left  _          -> w
+    Right (cpu', (_, o)) -> case readInst o of
         Score s           -> stepSim vp t $ w { score = s, cpu = cpu' }
         TilePos cord tile -> stepSim vp t
             $ w { tiles = M.insert cord tile (tiles w), cpu = cpu' }
