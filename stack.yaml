@@ -4,4 +4,3 @@ ghc-options:
   "$locals": -fhide-source-paths
 
 extra-deps:
-  - astar-monad-0.3.0.0@

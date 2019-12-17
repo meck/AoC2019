@@ -46,6 +46,7 @@ library
         Util
         CGC
         Parsing
+        Queue
     hs-source-dirs: src
     default-language: Haskell2010
     ghc-options: -Wall -Wincomplete-uni-patterns
@@ -65,8 +66,7 @@ library
         bytestring,
         case-insensitive,
         gloss,
-        deepseq,
-        astar-monad
+        deepseq
 
 executable AoC2019
     main-is: Main.hs

@@ -1,12 +1,14 @@
+{-# LANGUAGE TupleSections #-}
 module Day15 (day15a, day15b) where
 
 import           CGC
-import           Control.Monad.AStar
-import           Control.Monad.State.Strict
-import           Data.Foldable                  ( asum )
-import           Data.Maybe                     ( fromJust )
-import           Data.Monoid                    ( Sum(..) )
+import qualified Data.Map.Lazy                 as M
+import           Data.Maybe                     ( fromJust
+                                                , isNothing
+                                                )
 import qualified Parsing                       as P
+import qualified Queue                         as Q
+import           Util                           ( (+^) )
 
 data Direction = N | S | W | E deriving (Eq, Bounded, Show)
 
@@ -25,38 +27,56 @@ instance Enum Direction where
 
 data Reply = Wall | Moved | Oxy deriving (Eq, Enum, Ord, Show)
 
-type SearchTank a = AStar (CGCState, [Direction]) (Sum Int) Reply a
+data Step = Step { rep :: Reply
+                 , sta :: CGCState
+                 , pos :: (Int,Int)
+                 } deriving (Eq, Show)
+
+instance Ord Step where
+  compare s s' = pos s `compare` pos s'
 
 queryCGC :: CGCState -> Direction -> (Reply, CGCState)
 queryCGC c d = case runCGCuntilOut 1 c ([fromEnum d], []) of
     Right (c', (_, [o])) -> (toEnum o, c')
     _                    -> error "Incorrect Output or halt"
 
-stepAstar :: Direction -> SearchTank ()
-stepAstar d = do
-    spend 1
-    (cpu, ds) <- get
-    let (r, cpu') = queryCGC cpu d
-    put (cpu', d : ds)
-    case r of
-        Wall  -> failure
-        Oxy   -> done Oxy
-        Moved -> asum $ stepAstar <$> nextSteps
+bfsWhile :: Ord k => (k -> Maybe [k]) -> k -> M.Map k Int
+bfsWhile gen inital = go M.empty (Q.push (0, inital) Q.empty)
   where
-    nextSteps = filter (/= antiD) [minBound .. maxBound]
-    antiD     = case d of
-        N -> S
-        S -> N
-        W -> E
-        E -> W
+    go seen q
+        | Q.isEmpty q = seen
+        | k `M.member` seen = go seen q'
+        | isNothing mNext = M.insert k d seen
+        | otherwise = go (M.insert k d seen)
+        $ foldr (Q.push . (succ d, )) q'
+        $ fromJust mNext
+      where
+        (mk, q') = Q.pop q
+        (d , k ) = fromJust mk
+        mNext    = gen k
 
-solveA :: [Int] -> Int
-solveA inp = fromJust $ length . snd <$> execAStar
-    (asum $ stepAstar <$> [minBound .. maxBound])
-    (initCGC inp, [])
+nextSteps :: Step -> Maybe [Step]
+nextSteps (Step Oxy  _ _) = Nothing
+nextSteps (Step Wall _ _) = Just []
+nextSteps stp             = Just $ takeStep <$> [minBound .. maxBound]
+  where
+    takeStep d = uncurry Step (queryCGC (sta stp) d) $ case d of
+        N -> pos stp +^ (0, 1)
+        S -> pos stp +^ (0, -1)
+        W -> pos stp +^ (-1, 0)
+        E -> pos stp +^ (1, 0)
+
+solveA :: [Int] -> (Step, Int)
+solveA inp = M.findMax $ M.filterWithKey (const . (Oxy ==) . rep) $ bfsWhile
+    nextSteps
+    (Step Moved (initCGC inp) (0, 0))
+
+solveB :: [Int] -> Int
+solveB inp = M.foldr max 0 $ bfsWhile nextSteps (oxy { rep = Moved })
+    where oxy = fst $ solveA inp
 
 day15a :: String -> String
-day15a = show . solveA . P.run (P.commaSepListOf P.integer)
+day15a = show . snd . solveA . P.run (P.commaSepListOf P.integer)
 
 day15b :: String -> String
-day15b = id
+day15b = show . solveB . P.run (P.commaSepListOf P.integer)
