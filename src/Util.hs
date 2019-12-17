@@ -7,6 +7,7 @@ module Util
     , manhaDist
     , digitsR
     , digits
+    , unDigits
     , Data.Bifunctor.bimap
     , bimap'
     , (-^)
@@ -50,8 +51,13 @@ manhaDist :: Num a => (a, a) -> (a, a) -> a
 manhaDist (x, y) (x', y') = abs (x - x') + abs (y - y')
 
 digitsR :: Integral n => n -> [n]
-digitsR 0 = []
-digitsR x = let (rest, lastDigit) = quotRem x 10 in lastDigit : digitsR rest
+digitsR 0 = [0]
+digitsR n = go n
+  where go 0 = []
+        go x = let (rest, lastDigit) = quotRem x 10 in lastDigit : go rest
+
+unDigits :: Integral n => [n] -> n 
+unDigits = foldl ((+) . (10 *)) 0
 
 digits :: Integral n => n -> [n]
 digits = reverse . digitsR
